@@ -1,0 +1,7 @@
+[package]
+name = "dec3rd"
+version = "0.1.0"
+edition = "2021"
+authors = ["Borja Garcia Gonzalez <debuti@gmail.com>"]
+
+[dependencies]
