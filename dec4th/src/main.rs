@@ -1,3 +1,5 @@
+use std::fmt;
+
 const DEBUG: bool = false;
 macro_rules! debugln {
     ($($args:expr),*) => ( if DEBUG {println!($( $args ),* )});
@@ -8,14 +10,14 @@ struct Board {
     id: usize,
     row_nb: usize,
     column_nb: usize,
-    number_lyr: Vec<Vec<u32>>,
+    numbers_lyr: Vec<Vec<u32>>,
     crosses_lyr: Vec<Vec<bool>>,
     won: bool,
 }
 
 impl Board {
     fn parse(id: usize, input: &str) -> Board {
-        let number_lyr: Vec<Vec<u32>> = input
+        let numbers_lyr: Vec<Vec<u32>> = input
             .split("\n")
             .map(|x| {
                 x.split(" ")
@@ -24,13 +26,13 @@ impl Board {
                     .collect()
             })
             .collect();
-        let row_nb = number_lyr.len();
-        let column_nb = number_lyr.iter().nth(0).unwrap().len();
+        let row_nb = numbers_lyr.len();
+        let column_nb = numbers_lyr.iter().nth(0).unwrap().len();
         Board {
             id: id,
             row_nb: row_nb,
             column_nb: column_nb,
-            number_lyr: number_lyr,
+            numbers_lyr: numbers_lyr,
             crosses_lyr: vec![vec![false; column_nb]; row_nb],
             won: false,
         }
@@ -40,7 +42,7 @@ impl Board {
             return false;
         }
         let mut rowidx = 0;
-        for row in &self.number_lyr {
+        for row in &self.numbers_lyr {
             let mut columnidx = 0;
             for item in row {
                 if draw == item {
@@ -105,11 +107,11 @@ impl Board {
     fn score(&self, draw: u32) -> u32 {
         let mut sum = 0;
         let mut rowidx = 0;
-        for row in &self.number_lyr {
+        for row in &self.numbers_lyr {
             let mut columnidx = 0;
             for _ in row {
                 if !self.crosses_lyr[rowidx][columnidx] {
-                    sum += self.number_lyr[rowidx][columnidx];
+                    sum += self.numbers_lyr[rowidx][columnidx];
                 }
                 columnidx += 1;
             }
@@ -119,8 +121,38 @@ impl Board {
     }
 }
 
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut repr = String::new();
+        let mut rowidx = 0;
+        for row in &self.numbers_lyr {
+            let mut columnidx = 0;
+            for item in row {
+                repr.push_str(&format!(
+                    "{}{:3}{} ",
+                    if self.crosses_lyr[rowidx][columnidx] {
+                        "\x1b[0;31m"
+                    } else {
+                        ""
+                    },
+                    item,
+                    if self.crosses_lyr[rowidx][columnidx] {
+                        "\x1b[0m"
+                    } else {
+                        ""
+                    }
+                ));
+                columnidx += 1;
+            }
+            repr.push_str("\n");
+            rowidx += 1;
+        }
+        write!(f, "{}", repr)
+    }
+}
+
 fn main() {
-    let data = String::from_utf8_lossy(include_bytes!("input.txt"));
+    let data = String::from_utf8_lossy(include_bytes!("test.txt"));
     let mut data: Vec<&str> = data.split("\n\n").filter(|x| x.len() > 0).collect();
     let random: Vec<u32> = data
         .remove(0)
@@ -138,13 +170,9 @@ fn main() {
     for draw in &random {
         for board in &mut boards {
             if board.cross(draw) {
-                println!(
-                    "Board {} won with score {}!",
-                    board.id,
-                    board.score(*draw)
-                );
+                println!("Board {} won with score {}!", board.id, board.score(*draw));
+                debugln!("{}", board);
             }
         }
     }
-    debugln!("{:?}", boards);
 }
