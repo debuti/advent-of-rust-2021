@@ -31,6 +31,14 @@ fn main() {
     }
     println!("1: {}", sum);
 
+    if (true) {
+        println!("\nEnter these commands in octave to render the depthmap:");
+        println!("[x,y] = meshgrid(linspace(0, {}, {}), linspace(0, {}, {}));", w-1, w, h-1, h);
+        let tmp = format!("{:?}", data).replace("], [","; ").replace("]]","]").replace("[[","[").replace(", "," ");
+        println!("z= {};", tmp);
+        println!("contour(x,y,z);");
+    }
+
     let mut basins: Vec<usize> = basinseeds
         .iter()
         .map(|b| discover(&mut data, (w, h), *b))
