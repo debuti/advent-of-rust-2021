@@ -1,3 +1,7 @@
+use std::{thread, time};
+
+const VISUALIZE_RATE: u64 = 200;
+
 fn main() {
     let mut data = include_str!("input.txt")
         .split("\n")
@@ -30,6 +34,16 @@ fn main() {
                     *octopus = 0;
                 }
             }
+        }
+        if VISUALIZE_RATE > 0 {
+            print!("\x1B[2J");
+            for rowidx in 0..h {
+                for colidx in 0..w {
+                    print!("{}{}{}", if data[rowidx][colidx]==0 {"\x1b[0;31m"}else{""}, data[rowidx][colidx], if data[rowidx][colidx]==0 {"\x1b[0m"}else{""});
+                }
+                println!("");
+            }
+            thread::sleep(time::Duration::from_millis(VISUALIZE_RATE));
         }
         if step == 100 {
             println!("1: {}", flashes);
