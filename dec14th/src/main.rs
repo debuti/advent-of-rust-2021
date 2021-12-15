@@ -3,7 +3,19 @@ use std::collections::HashMap;
 fn main() {
     let parts = include_str!("input.txt").split_once("\n\n").unwrap();
 
-    let mut tpl = parts.0.chars().collect::<Vec<char>>();
+    let tpl = parts.0.chars().collect::<Vec<char>>();
+    let mut items: HashMap<[char; 2], isize> = HashMap::new();
+    for ann in tpl
+        .windows(2)
+        .map(|t| [t[0], t[1]])
+        .collect::<Vec<[char; 2]>>()
+    {
+        if let Some(i) = items.get_mut(&ann) {
+            *i += 1;
+        } else {
+            items.insert(ann, 1);
+        }
+    }
 
     let instructions = parts
         .1
@@ -12,47 +24,51 @@ fn main() {
         .map(|s| {
             let t = s.split_once(" -> ").unwrap();
             (
-                t.0.chars().collect::<Vec<char>>(),
+                [
+                    t.0.chars().collect::<Vec<char>>()[0],
+                    t.0.chars().collect::<Vec<char>>()[1],
+                ],
                 t.1.chars().next().unwrap(),
             )
         })
-        .collect::<Vec<(Vec<char>, char)>>();
+        .collect::<HashMap<[char; 2], char>>();
 
     for step in 1..=40 {
-        println!("{}",step);
-        let mut temp = Vec::new();
-        for window in tpl.windows(2) {
-            let mut flag = false;
-            for inst in &instructions {
-                if inst.0 == window {
-                    temp.push(inst.0[0]);
-                    temp.push(inst.1);
-                    flag = true;
-                    break;
-                }
-            }
-            if !flag {
-                temp.push(window[0]);
+        let mut tmp: Vec<([char; 2], isize)> = Vec::new();
+
+        for (k, v) in items.iter() {
+            tmp.push((*k, *v));
+            if let Some(inst) = instructions.get(k) {
+                tmp.push((*k, -*v));
+                let lk = &[k[0], *inst];
+                tmp.push((*lk, *v));
+                let rk = &[*inst, k[1]];
+                tmp.push((*rk, *v));
             }
         }
-        temp.push(*tpl.last().unwrap());
-        tpl = temp;
+        
+        items.clear();
+        for ann in tmp {
+            if let Some(i) = items.get_mut(&ann.0) {
+                *i += ann.1;
+            } else {
+                items.insert(ann.0, ann.1);
+            }
+        }
+        
         if step == 10 || step == 40 {
-        println!("-> {:?}", max(histogram(&tpl))-min(histogram(&tpl)));}
+            let mut summary: HashMap<char, isize> = HashMap::new();
+            summary.insert(*tpl.iter().last().unwrap(), 1);
+            for tuple in &items {
+                if let Some(x) = summary.get_mut(&tuple.0[0]) {
+                    *x += tuple.1;
+                } else {
+                    summary.insert(tuple.0[0], *tuple.1);
+                }
+            }
+            let max = summary.iter().max_by(|x, y| x.1.cmp(y.1)).unwrap();
+            let min = summary.iter().min_by(|x, y| x.1.cmp(y.1)).unwrap();
+            println!("-> {}", max.1 - min.1);
+        }
     }
-}
-
-fn histogram<T: Eq + std::hash::Hash + Copy>(v: &Vec<T>) -> HashMap<T, usize> {
-    let mut r: HashMap<T, usize> = HashMap::new();
-    for x in v {
-        *r.entry(*x).or_default() += 1;
-    }
-    r
-}
-
-fn max<T>(h: HashMap<T, usize>) -> usize {
-    *h.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(_, v)| v).unwrap()
-}
-fn min<T>(h: HashMap<T, usize>) -> usize {
-    *h.iter().min_by(|a, b| a.1.cmp(&b.1)).map(|(_, v)| v).unwrap()
 }
