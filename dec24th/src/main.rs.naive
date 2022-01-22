@@ -1,0 +1,148 @@
+#[derive(Debug)]
+enum Oprnd {
+    Reg(usize),
+    Scalar(i64),
+}
+impl Oprnd {
+    fn new(raw: &str) -> Self {
+        match raw {
+            "w" => Oprnd::Reg(0),
+            "x" => Oprnd::Reg(1),
+            "y" => Oprnd::Reg(2),
+            "z" => Oprnd::Reg(3),
+            v => Oprnd::Scalar(v.parse::<_>().unwrap()),
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Op {
+    Inp(Oprnd),
+    Add(Oprnd, Oprnd),
+    Mul(Oprnd, Oprnd),
+    Div(Oprnd, Oprnd),
+    Mod(Oprnd, Oprnd),
+    Eql(Oprnd, Oprnd),
+}
+impl Op {
+    fn new(raw: &str) -> Self {
+        let raw = raw.split(' ').collect::<Vec<_>>();
+        match raw[0] {
+            "add" => Self::Add(Oprnd::new(raw[1]), Oprnd::new(raw[2])),
+            "mul" => Self::Mul(Oprnd::new(raw[1]), Oprnd::new(raw[2])),
+            "div" => Self::Div(Oprnd::new(raw[1]), Oprnd::new(raw[2])),
+            "mod" => Self::Mod(Oprnd::new(raw[1]), Oprnd::new(raw[2])),
+            "eql" => Self::Eql(Oprnd::new(raw[1]), Oprnd::new(raw[2])),
+            _ => Self::Inp(Oprnd::new(raw[1])),
+        }
+    }
+}
+
+type ALU = [i64; 4];
+
+fn run(mut alu: ALU, chunk: &Vec<Op>, seed: i64) -> ALU {
+    for op in chunk {
+        match op {
+            Op::Inp(r) => {
+                if let Oprnd::Reg(i) = r {
+                    alu[*i] = seed;
+                } else {
+                    unreachable!();
+                }
+            }
+            Op::Add(r1, ros) => {
+                if let Oprnd::Reg(i1) = r1 {
+                    alu[*i1] += match ros {
+                        Oprnd::Reg(i2) => alu[*i2],
+                        Oprnd::Scalar(v) => *v,
+                    }
+                } else {
+                    unreachable!();
+                }
+            }
+            Op::Mul(r1, ros) => {
+                if let Oprnd::Reg(i1) = r1 {
+                    alu[*i1] *= match ros {
+                        Oprnd::Reg(i2) => alu[*i2],
+                        Oprnd::Scalar(v) => *v,
+                    }
+                } else {
+                    unreachable!();
+                }
+            }
+            Op::Div(r1, ros) => {
+                if let Oprnd::Reg(i1) = r1 {
+                    alu[*i1] /= match ros {
+                        Oprnd::Reg(i2) => alu[*i2],
+                        Oprnd::Scalar(v) => *v,
+                    }
+                } else {
+                    unreachable!();
+                }
+            }
+            Op::Mod(r1, ros) => {
+                if let Oprnd::Reg(i1) = r1 {
+                    alu[*i1] %= match ros {
+                        Oprnd::Reg(i2) => alu[*i2],
+                        Oprnd::Scalar(v) => *v,
+                    }
+                } else {
+                    unreachable!();
+                }
+            }
+            Op::Eql(r1, ros) => {
+                if let Oprnd::Reg(i1) = r1 {
+                    alu[*i1] = if alu[*i1]
+                        == match ros {
+                            Oprnd::Reg(i2) => alu[*i2],
+                            Oprnd::Scalar(v) => *v,
+                        } {
+                        1
+                    } else {
+                        0
+                    }
+                } else {
+                    unreachable!();
+                }
+            }
+        }
+    }
+    alu
+}
+
+fn largest(code: &Vec<Vec<Op>>) -> u64 {
+    fn rec(alu: ALU, code: &Vec<Vec<Op>>, idx: usize) -> bool {
+        for n in (1..=9).rev() {
+            if idx == 0 {println!(">{}<", n);}
+            let newalu = run(alu, &code[idx], n);
+            if idx < 13 {
+                if rec(newalu, code, idx + 1) {
+                    print!("{}", n);
+                    return true;
+                }
+            } else if newalu[3] == 0 {
+                println!("There! {}", n);
+                return true;
+            }
+        }
+        false
+    }
+
+    rec([0, 0, 0, 0], code, 0);
+    0
+}
+
+fn main() {
+    let code = include_str!("input.txt")
+        .split("inp")
+        .map(|c| {
+            c.split('\n')
+                .filter(|l| l.len() > 0)
+                .map(|l| Op::new(l))
+                .collect::<Vec<_>>()
+        })
+        .filter(|c| c.len() > 0)
+        .collect::<Vec<_>>();
+
+    println!("1: {:#?}", largest(&code));
+}
