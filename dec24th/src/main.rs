@@ -1,7 +1,12 @@
+// #[macro_use]
+// extern crate lazy_static;
+
 use std::sync::{Arc, Mutex};
 use std::thread;
 
 type Tuning = [i64; 3];
+
+/* Replace this const with the static to get the values from input (less performance) */
 const TUNINGS: [Tuning; 14] = [
     [1, 10, 2],
     [1, 10, 4],
@@ -18,6 +23,23 @@ const TUNINGS: [Tuning; 14] = [
     [26, -11, 5],
     [26, -2, 11],
 ];
+
+// lazy_static! {
+//     static ref TUNINGS: Vec<Tuning> = include_str!("input.txt")
+//     .split("inp")
+//     .filter(|c| c.len() > 0)
+//     .map(|c| {
+//         c.split('\n')
+//             .enumerate()
+//             .filter(|(i, _)| *i == 4 || *i == 5 || *i == 15)
+//             .map(|(_, l)| l.split(' ').last().unwrap().parse::<i64>().unwrap())
+//             .collect::<Vec<_>>()
+//             .try_into()
+//             .unwrap()
+//     })
+//     .collect::<Vec<_>>();
+// }
+
 fn algorithm(mut z: i64, tune: &Tuning, input: i64) -> i64 {
     // Code decompiled by hand
     // inp w     ## Input
@@ -66,15 +88,18 @@ fn x_est(result: &mut i64, range: [i64; 9]) {
     println!();
 }
 
-fn x_est_multithreaded(result: &mut i64, range: [i64; 9]) {
+fn x_est_multithreaded<'a>(result: &mut i64, range: [i64; 9]) {
     assert_eq!(range[0], 1);
     for n in range {
         let mut thrds = Vec::new();
         let results = Arc::new(Mutex::new([0; 9]));
         for m in range {
             let results = Arc::clone(&results);
+            /*
+             * This can be further optimized by killing all the threads with
+             * higher m once something is found
+             */
             thrds.push(thread::spawn(move || {
-                println!("Launching thr {}-{}", n, m);
                 let mut r = 0;
                 if rec(
                     &mut r,
@@ -82,10 +107,7 @@ fn x_est_multithreaded(result: &mut i64, range: [i64; 9]) {
                     2,
                     &range,
                 ) {
-                    println!("Result {} in thr {}-{}", r, n, m);
                     results.lock().unwrap()[m as usize - 1] = r;
-                } else {
-                    println!("Finished {}-{}", n, m);
                 }
             }));
         }
@@ -101,19 +123,20 @@ fn x_est_multithreaded(result: &mut i64, range: [i64; 9]) {
                 .filter(|(_, x)| *x > 0)
                 .nth(0)
                 .unwrap();
-            *result = n * 10i64.pow(13) + (m as i64) * 10i64.pow(12) + r;
+            *result = n * 10i64.pow(13) + (1 + m as i64) * 10i64.pow(12) + r;
             return;
         }
     }
 }
 
 fn main() {
-    let range: [i64; 9] = (1..=9).collect::<Vec<_>>().try_into().unwrap();
-    let mut result = 0;
-    x_est_multithreaded(&mut result, range);
-    println!("2: {:#?}", result);
     let range: [i64; 9] = (1..=9).rev().collect::<Vec<_>>().try_into().unwrap();
     let mut result = 0;
     x_est(&mut result, range);
     println!("1: {:#?}", result);
+
+    let range: [i64; 9] = (1..=9).collect::<Vec<_>>().try_into().unwrap();
+    let mut result = 0;
+    x_est_multithreaded(&mut result, range);
+    println!("2: {:#?}", result);
 }

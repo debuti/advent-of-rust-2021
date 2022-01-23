@@ -5,3 +5,4 @@ edition = "2021"
 authors = ["Borja Garcia Gonzalez <debuti@gmail.com>"]
 
 [dependencies]
+lazy_static = "1.4.0"
